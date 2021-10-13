@@ -8,6 +8,8 @@
     "/dist"
   ],
   "scripts": {
+    "keepFiles": "cp ./LICENSE ./dist && cp ./package.json ./dist && cp ./README.md ./dist",
+    "build:prod": "npm run build -- --project ./tsconfig.build.json && npm run keepFiles",
     "build": "rimraf dist && tsc",
     "test": "jest --coverage",
     "lint": "eslint src --ext .ts,.tsx",
