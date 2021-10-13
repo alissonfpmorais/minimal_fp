@@ -1,6 +1,6 @@
 {
   "name": "@alissonfpmorais/minimal_fp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Functional programming helpers on TS",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
