@@ -2,14 +2,13 @@
   "name": "@alissonfpmorais/minimal_fp",
   "version": "0.1.2",
   "description": "Functional programming helpers on TS",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "/dist"
   ],
   "scripts": {
-    "keepFiles": "cp ./LICENSE ./dist && cp ./package.json ./dist && cp ./README.md ./dist",
-    "build:prod": "npm run build -- --project ./tsconfig.build.json && npm run keepFiles",
+    "build:prod": "npm run build -- --project ./tsconfig.build.json",
     "build": "rimraf dist && tsc",
     "test": "jest --coverage",
     "lint": "eslint src --ext .ts,.tsx",
