@@ -66,7 +66,7 @@ export class EitherIO<Left, Right> {
     fn: (value1: Right, value2: OtherRight) => Promise<NextRight> | NextRight,
   ): EitherIO<Left, NextRight> {
     return this.flatMap(async (value: Right) => {
-      const either: Either<Left, OtherRight> = await eitherIoMonad.run();
+      const either: Either<Left, OtherRight> = await eitherIoMonad.safeRun();
       if (either.isLeft()) return eitherIoMonad as unknown as EitherIO<Left, NextRight>;
       const nextValue: NextRight = await fn(value, either.getRight());
       return EitherIO.of(this._defaultErrorFn, nextValue);
@@ -103,7 +103,7 @@ export class EitherIO<Left, Right> {
 
   catch(fn: (error: Left) => Promise<Right> | Right): EitherIO<Left, Right> {
     const callback: () => Promise<Right> = async () => {
-      const either: Either<Left, Right> = await this.run();
+      const either: Either<Left, Right> = await this.safeRun();
       if (either.isLeft()) return await fn(either.getLeft());
       return either.getRight();
     };
@@ -117,8 +117,8 @@ export class EitherIO<Left, Right> {
     return either.getRight();
   }
 
-  async run(): Promise<Either<Left, Right>> {
-    const either: Either<Error, Either<Left, Right>> = await this._io.run();
+  async safeRun(): Promise<Either<Left, Right>> {
+    const either: Either<Error, Either<Left, Right>> = await this._io.safeRun();
     if (either.isLeft()) Either.right(this._defaultErrorFn);
     return either.getRight();
   }

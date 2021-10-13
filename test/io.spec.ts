@@ -129,13 +129,13 @@ describe('Testing IO Monad', () => {
   });
 
   it('Safe run successful IO should return Either Right', async () => {
-    const either: Either<Error, number> = await io.run();
+    const either: Either<Error, number> = await io.safeRun();
     expect(either.getRight()).toEqual(rightValue);
     expect(either.getLeft).toThrow('No left value found');
   });
 
   it('Safe run failed IO should return Either Right', async () => {
-    const either: Either<Error, number> = await failIO.run();
+    const either: Either<Error, number> = await failIO.safeRun();
     expect(either.getRight).toThrow('No right value found');
     expect(either.getLeft()).toEqual(new Error(errorMessage));
   });

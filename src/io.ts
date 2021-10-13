@@ -58,7 +58,7 @@ export class IO<Value> {
     fn: (value1: Value, value2: OtherValue) => Promise<NextValue> | NextValue,
   ): IO<NextValue> {
     return this.map(async (value: Value) => {
-      const either: Either<Error, OtherValue> = await ioMonad.run();
+      const either: Either<Error, OtherValue> = await ioMonad.safeRun();
       if (either.isLeft()) throw either.getLeft();
       return fn(value, either.getRight());
     }) as IO<NextValue>;
@@ -66,7 +66,7 @@ export class IO<Value> {
 
   catch(fn: (error: Error) => Promise<Value> | Value): IO<Value> {
     return IO.from(async () => {
-      const either: Either<Error, Value> = await this.run();
+      const either: Either<Error, Value> = await this.safeRun();
       if (either.isLeft()) return await fn(either.getLeft());
       return either.getRight();
     });
@@ -76,7 +76,7 @@ export class IO<Value> {
     return (await this._computation((value: unknown) => value)) as Value;
   }
 
-  async run(): Promise<Either<Error, Value>> {
+  async safeRun(): Promise<Either<Error, Value>> {
     try {
       const data: Value = await this.unsafeRun();
       return Either.right(data);
