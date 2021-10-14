@@ -18,6 +18,15 @@ export class EitherIO<Left, Right> {
     return EitherIO.of(defaultErrorFn, null).map(() => fn()) as EitherIO<Left, Right>;
   }
 
+  static fromEither<Left, Right>(
+    defaultErrorFn: ErrorFn<Left>,
+    fn: () => Promise<Either<Left, Right>> | Either<Left, Right>,
+  ): EitherIO<Left, Right> {
+    return EitherIO.from(defaultErrorFn, fn).flatMap((either: Either<Left, Right>, errorFn: ErrorFn<Left>) => {
+      return either.isLeft() ? EitherIO.raise(() => either.getLeft()) : EitherIO.of(errorFn, either.getRight());
+    });
+  }
+
   static raise<Left, Right>(errorFn: () => Left): EitherIO<Left, Right> {
     return EitherIO.from(errorFn, () => {
       throw new Error();

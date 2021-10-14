@@ -24,6 +24,24 @@ describe('Testing EitherIO Monad', () => {
     await expect(anotherIO.unsafeRun()).resolves.toEqual(rightValue);
   });
 
+  it('Creating EitherIO from right Either should show value when unsafeRun', async () => {
+    const either: Either<string, number> = Either.right(42);
+    const eitherIO: EitherIO<string, number> = EitherIO.fromEither(
+      () => errorMessage,
+      () => either,
+    );
+    await expect(eitherIO.unsafeRun()).resolves.toEqual(42);
+  });
+
+  it('Creating EitherIO from left Either should show error when unsafeRun', async () => {
+    const either: Either<string, number> = Either.left(errorMessage);
+    const eitherIO: EitherIO<string, number> = EitherIO.fromEither(
+      () => 'Another one?',
+      () => either,
+    );
+    await expect(eitherIO.unsafeRun()).rejects.toEqual(errorMessage);
+  });
+
   it('Creating a failure EitherIO should raise error when unsafeRun', async () => {
     await expect(eitherFailIO.unsafeRun()).rejects.toEqual(errorMessage);
   });
