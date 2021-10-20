@@ -14,16 +14,20 @@ export class EitherIO<Left, Right> {
     return new EitherIO(defaultErrorFn, IO.of(Either.right(value)));
   }
 
-  static from<Left, Right>(defaultErrorFn: ErrorFn<Left>, fn: () => Promise<Right> | Right): EitherIO<Left, Right> {
-    return EitherIO.of(defaultErrorFn, null).map(() => fn()) as EitherIO<Left, Right>;
-  }
-
   static fromEither<Left, Right>(
     defaultErrorFn: ErrorFn<Left>,
     fn: () => Promise<Either<Left, Right>> | Either<Left, Right>,
   ): EitherIO<Left, Right> {
-    return EitherIO.from(defaultErrorFn, fn).flatMap((either: Either<Left, Right>, errorFn: ErrorFn<Left>) => {
-      return either.isLeft() ? EitherIO.raise(() => either.getLeft()) : EitherIO.of(errorFn, either.getRight());
+    return new EitherIO(
+      defaultErrorFn,
+      IO.from(() => fn()),
+    );
+  }
+
+  static from<Left, Right>(defaultErrorFn: ErrorFn<Left>, fn: () => Promise<Right> | Right): EitherIO<Left, Right> {
+    return EitherIO.fromEither(defaultErrorFn, async () => {
+      const value: Right = await fn();
+      return Either.right(value);
     });
   }
 
@@ -56,9 +60,11 @@ export class EitherIO<Left, Right> {
   }
 
   tap(fn: (value: Right) => Promise<void> | void): EitherIO<Left, Right> {
-    return this.map(async (value: Right) => {
-      await fn(value);
-      return value;
+    return this.flatMap(async (value: Right) => {
+      Promise.resolve()
+        .then(() => fn(value))
+        .finally();
+      return EitherIO.of(this._defaultErrorFn, value);
     });
   }
 
@@ -86,7 +92,7 @@ export class EitherIO<Left, Right> {
     fn: (error: Left) => Promise<EitherIO<NextLeft, Right>> | EitherIO<NextLeft, Right>,
   ): EitherIO<NextLeft, Right> {
     const nextIO: IO<Either<NextLeft, Right>> = this._io.flatMap(async (either: Either<Left, Right>) => {
-      if (either.isRight()) return this._io as unknown as IO<Either<NextLeft, Right>>;
+      if (either.isRight()) return IO.of(either) as unknown as IO<Either<NextLeft, Right>>;
 
       try {
         const eitherIO: EitherIO<NextLeft, Right> = await fn(either.getLeft());
@@ -112,7 +118,7 @@ export class EitherIO<Left, Right> {
   catch(fn: (error: Left) => Promise<Right> | Right): EitherIO<Left, Right> {
     const callback: () => Promise<Right> = async () => {
       const either: Either<Left, Right> = await this.safeRun();
-      if (either.isLeft()) return await fn(either.getLeft());
+      if (either.isLeft()) return fn(either.getLeft());
       return either.getRight();
     };
 

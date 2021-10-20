@@ -114,8 +114,8 @@ describe('Testing IO Monad', () => {
     const anotherIO: IO<number> = IO.raise(() => new Error(anotherErrorMessage));
     const nextIO: IO<number> = failIO.zip(anotherIO, (value1: number, value2: number) => value1 + value2);
     const nextIO2: IO<number> = anotherIO.zip(failIO, (value1: number, value2: number) => value1 + value2);
-    await expect(nextIO.unsafeRun()).rejects.toThrow(errorMessage);
-    await expect(nextIO2.unsafeRun()).rejects.toThrow(anotherErrorMessage);
+    await expect(() => nextIO.unsafeRun()).rejects.toThrow(errorMessage);
+    await expect(() => nextIO2.unsafeRun()).rejects.toThrow(anotherErrorMessage);
   });
 
   it("Catch a successful IO should keep IO's value", async () => {

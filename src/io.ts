@@ -14,11 +14,11 @@ export class IO<Value> {
   }
 
   static from<Value>(fn: () => Promise<Value> | Value): IO<Value> {
-    return IO.of(null).map(() => fn());
+    return new IO(async () => fn());
   }
 
   static raise<Value>(errorFn: () => Error): IO<Value> {
-    return IO.from(() => {
+    return new IO(async () => {
       throw errorFn();
     });
   }
@@ -32,21 +32,25 @@ export class IO<Value> {
   }
 
   map<NextValue>(fn: (value: Value) => Promise<NextValue> | NextValue): IO<NextValue> {
-    return this.flatMap(async (value: Value) => {
-      return IO.of(await fn(value));
+    return new IO(async () => {
+      const value: Value = await this._sideEffect();
+      return fn(value);
     });
   }
 
   tap(fn: (value: Value) => Promise<void> | void): IO<Value> {
-    return this.map(async (value: Value) => {
+    return new IO(async () => {
+      const value: Value = await this._sideEffect();
       await fn(value);
       return value;
     });
   }
 
   filter(errorFn: () => Error, fn: (value: Value) => boolean): IO<Value> {
-    return this.flatMap(async (value: Value) => {
-      return fn(value) ? IO.of(value) : IO.raise(errorFn);
+    return new IO(async () => {
+      const value: Value = await this._sideEffect();
+      if (!fn(value)) throw errorFn();
+      return value;
     });
   }
 
@@ -54,15 +58,15 @@ export class IO<Value> {
     ioMonad: IO<OtherValue>,
     fn: (value1: Value, value2: OtherValue) => Promise<NextValue> | NextValue,
   ): IO<NextValue> {
-    return this.map(async (value: Value) => {
-      const either: Either<Error, OtherValue> = await ioMonad.safeRun();
-      if (either.isLeft()) throw either.getLeft();
-      return fn(value, either.getRight());
-    }) as IO<NextValue>;
+    return new IO(async () => {
+      const value1: Value = await this._sideEffect();
+      const value2: OtherValue = await ioMonad.unsafeRun();
+      return fn(value1, value2);
+    });
   }
 
   catch(fn: (error: Error) => Promise<Value> | Value): IO<Value> {
-    return IO.from(async () => {
+    return new IO(async () => {
       const either: Either<Error, Value> = await this.safeRun();
       if (either.isLeft()) return fn(either.getLeft());
       return either.getRight();
