@@ -212,4 +212,59 @@ describe('Testing EitherIO Monad', () => {
     expect(either.getRight).toThrow('No right value found');
     expect(either.getLeft()).toEqual(errorMessage);
   });
+
+  it('Check if EitherIO operators run properly', async () => {
+    let message: string = '';
+    const result: Either<string, number> = await eitherIO
+      .flatMap((value: number, errorFn: ErrorFn<string>) => {
+        message = message + 'p';
+        return EitherIO.of(errorFn, value / 2);
+      })
+      .flatMap((value: number) => {
+        message = message + 'r';
+        return EitherIO.raise(() => value.toString());
+      })
+      .map((value: number) => {
+        message = message + '0';
+        return value / 2;
+      })
+      .catch(() => {
+        message = message + 'e';
+        return 42;
+      })
+      .map((value: number) => {
+        message = message + 'c';
+        return value / 2;
+      })
+      .tap(() => {
+        message = message + 'i';
+      })
+      .filter(
+        () => 'error',
+        (value: number) => {
+          message = message + 'o';
+          return value < 0;
+        },
+      )
+      .map((value: number) => {
+        message = message + '1';
+        return value * 2;
+      })
+      .flatMap((value: number, errorFn: ErrorFn<string>) => {
+        message = message + '2';
+        return EitherIO.of(errorFn, value / 2);
+      })
+      .catch(() => {
+        message = message + 'u';
+        return 42;
+      })
+      .zip(eitherIO, (value1: number, value2: number) => {
+        message = message + 's';
+        return value1 / 2 + value2 / 2;
+      })
+      .safeRun();
+
+    expect(result.getRight()).toEqual(42);
+    expect(message).toEqual('precious');
+  });
 });

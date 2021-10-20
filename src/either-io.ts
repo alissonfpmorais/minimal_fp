@@ -37,7 +37,7 @@ export class EitherIO<Left, Right> {
     fn: (value: Right, errorFn: ErrorFn<Left>) => Promise<EitherIO<Left, NextRight>> | EitherIO<Left, NextRight>,
   ): EitherIO<Left, NextRight> {
     const nextIO: IO<Either<Left, NextRight>> = this._io.flatMap(async (either: Either<Left, Right>) => {
-      if (either.isLeft()) return this._io as unknown as IO<Either<Left, NextRight>>;
+      if (either.isLeft()) return IO.of(either) as unknown as IO<Either<Left, NextRight>>;
 
       try {
         const eitherIO: EitherIO<Left, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
