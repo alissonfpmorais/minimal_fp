@@ -37,7 +37,7 @@ export class IO<Value> {
     });
   }
 
-  tap(fn: (value: Value) => Promise<void>): IO<Value> {
+  tap(fn: (value: Value) => Promise<void> | void): IO<Value> {
     return this.map(async (value: Value) => {
       await fn(value);
       return value;

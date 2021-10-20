@@ -139,4 +139,59 @@ describe('Testing IO Monad', () => {
     expect(either.getRight).toThrow('No right value found');
     expect(either.getLeft()).toEqual(new Error(errorMessage));
   });
+
+  it('Check if IO operators run properly', async () => {
+    let message: string = '';
+    const result: Either<Error, number> = await io
+      .flatMap((value: number) => {
+        message = message + 'p';
+        return IO.of(value / 2);
+      })
+      .flatMap((value: number) => {
+        message = message + 'r';
+        throw new Error(value.toString());
+      })
+      .map((value: number) => {
+        message = message + '0';
+        return value / 2;
+      })
+      .catch(() => {
+        message = message + 'e';
+        return 42;
+      })
+      .map((value: number) => {
+        message = message + 'c';
+        return value / 2;
+      })
+      .tap(() => {
+        message = message + 'i';
+      })
+      .filter(
+        () => new Error('error'),
+        (value: number) => {
+          message = message + 'o';
+          return value < 0;
+        },
+      )
+      .map((value: number) => {
+        message = message + '1';
+        return value * 2;
+      })
+      .flatMap((value: number) => {
+        message = message + '2';
+        return IO.of(value / 2);
+      })
+      .catch(() => {
+        message = message + 'u';
+        return 42;
+      })
+      .zip(io, (value1: number, value2: number) => {
+        message = message + 's';
+        return value1 / 2 + value2 / 2;
+      })
+      .safeRun();
+
+    expect(result.getRight()).toEqual(42);
+    expect(message).toEqual('precious');
+  });
 });

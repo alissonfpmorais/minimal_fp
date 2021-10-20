@@ -28,9 +28,7 @@ export class EitherIO<Left, Right> {
   }
 
   static raise<Left, Right>(errorFn: () => Left): EitherIO<Left, Right> {
-    return EitherIO.from(errorFn, () => {
-      throw new Error();
-    });
+    return new EitherIO(errorFn, IO.of(Either.left(errorFn())));
   }
 
   flatMap<NextRight>(
@@ -57,7 +55,7 @@ export class EitherIO<Left, Right> {
     });
   }
 
-  tap(fn: (value: Right) => Promise<void>): EitherIO<Left, Right> {
+  tap(fn: (value: Right) => Promise<void> | void): EitherIO<Left, Right> {
     return this.map(async (value: Right) => {
       await fn(value);
       return value;
