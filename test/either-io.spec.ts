@@ -215,13 +215,22 @@ describe('Testing EitherIO Monad', () => {
 
   it('Check if EitherIO operators run properly', async () => {
     let message: string = '';
+    const anotherFailIO: EitherIO<string, number> = eitherIO
+      .map((value: number) => {
+        message = message + 'o';
+        return value * 10;
+      })
+      .flatMap(() => {
+        message = message + 'u';
+        throw new Error('error');
+      });
     const result: Either<string, number> = await eitherIO
       .flatMap((value: number, errorFn: ErrorFn<string>) => {
-        message = message + 'p';
+        message = message + 'm';
         return EitherIO.of(errorFn, value / 2);
       })
       .flatMap((value: number) => {
-        message = message + 'r';
+        message = message + 'y';
         return EitherIO.raise(() => value.toString());
       })
       .map((value: number) => {
@@ -229,20 +238,20 @@ describe('Testing EitherIO Monad', () => {
         return value / 2;
       })
       .catch(() => {
-        message = message + 'e';
+        message = message + ' ';
         return 42;
       })
       .map((value: number) => {
-        message = message + 'c';
+        message = message + 'p';
         return value / 2;
       })
       .tap(() => {
-        message = message + 'i';
+        message = message + 'r';
       })
       .filter(
         () => 'error',
         (value: number) => {
-          message = message + 'o';
+          message = message + 'e';
           return value < 0;
         },
       )
@@ -255,16 +264,24 @@ describe('Testing EitherIO Monad', () => {
         return EitherIO.of(errorFn, value / 2);
       })
       .catch(() => {
-        message = message + 'u';
+        message = message + 'c';
         return 42;
       })
       .zip(eitherIO, (value1: number, value2: number) => {
-        message = message + 's';
+        message = message + 'i';
         return value1 / 2 + value2 / 2;
+      })
+      .zip(anotherFailIO, (value1: number, value2: number) => {
+        message = message + '3';
+        return value1 / 2 + value2 / 2;
+      })
+      .catch(() => {
+        message = message + 's';
+        return 42;
       })
       .safeRun();
 
     expect(result.getRight()).toEqual(42);
-    expect(message).toEqual('precious');
+    expect(message).toEqual('my precious');
   });
 });

@@ -74,7 +74,8 @@ export class EitherIO<Left, Right> {
   ): EitherIO<Left, NextRight> {
     return this.flatMap(async (value: Right) => {
       const either: Either<Left, OtherRight> = await eitherIoMonad.safeRun();
-      if (either.isLeft()) return eitherIoMonad as unknown as EitherIO<Left, NextRight>;
+      if (either.isLeft())
+        return EitherIO.fromEither(this._defaultErrorFn, () => either) as unknown as EitherIO<Left, NextRight>;
       const nextValue: NextRight = await fn(value, either.getRight());
       return EitherIO.of(this._defaultErrorFn, nextValue);
     });
