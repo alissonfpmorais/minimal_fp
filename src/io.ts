@@ -1,14 +1,16 @@
 import { Either } from './either';
 
-export type Resolver = (value: unknown) => unknown;
-
-export type Computation = (resolver: Resolver) => unknown;
+type SideEffect<Value> = () => Promise<Value>;
 
 export class IO<Value> {
-  constructor(private readonly _computation: Computation) {}
+  constructor(private readonly _sideEffect: SideEffect<Value>) {}
+
+  get sideEffect(): SideEffect<Value> {
+    return this._sideEffect;
+  }
 
   static of<Value>(value: Value): IO<Value> {
-    return new IO((resolver: Resolver) => resolver(value));
+    return new IO(async () => value);
   }
 
   static from<Value>(fn: () => Promise<Value> | Value): IO<Value> {
@@ -22,15 +24,10 @@ export class IO<Value> {
   }
 
   flatMap<NextValue>(fn: (value: Value) => Promise<IO<NextValue>> | IO<NextValue>): IO<NextValue> {
-    const computation: Computation = this._computation;
-    return new IO((resolver: Resolver) => {
-      return computation(async (value: Value) => {
-        return await (
-          await fn(value)
-        )._computation(async (nextValue: NextValue) => {
-          return await resolver(nextValue);
-        });
-      });
+    return new IO(async () => {
+      const value: Value = await this._sideEffect();
+      const nextValue: IO<NextValue> = await fn(value);
+      return nextValue.sideEffect();
     });
   }
 
@@ -67,13 +64,13 @@ export class IO<Value> {
   catch(fn: (error: Error) => Promise<Value> | Value): IO<Value> {
     return IO.from(async () => {
       const either: Either<Error, Value> = await this.safeRun();
-      if (either.isLeft()) return await fn(either.getLeft());
+      if (either.isLeft()) return fn(either.getLeft());
       return either.getRight();
     });
   }
 
   async unsafeRun(): Promise<Value> {
-    return (await this._computation((value: unknown) => value)) as Value;
+    return this._sideEffect();
   }
 
   async safeRun(): Promise<Either<Error, Value>> {
