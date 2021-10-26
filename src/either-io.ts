@@ -59,7 +59,7 @@ export class EitherIO<Left, Right> {
     });
   }
 
-  tap(fn: (value: Right) => Promise<void> | void): EitherIO<Left, Right> {
+  tap(fn: (value: Right) => Promise<unknown> | unknown): EitherIO<Left, Right> {
     return this.flatMap(async (value: Right) => {
       Promise.resolve()
         .then(() => fn(value))

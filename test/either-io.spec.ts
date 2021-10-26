@@ -71,16 +71,12 @@ describe('Testing EitherIO Monad', () => {
   });
 
   it('Tapping a successful EitherIO should not change the content', async () => {
-    const fn: (value: number) => Promise<number> = async (value: number) => value;
-    const tapFn: (value: number) => Promise<void> = fn as unknown as (value: number) => Promise<void>;
-    const value: number = await eitherIO.tap(tapFn).unsafeRun();
+    const value: number = await eitherIO.tap((value: number) => value).unsafeRun();
     expect(value).toEqual(rightValue);
   });
 
   it('Tapping a failed EitherIO and unsafe runnning it should raise error', async () => {
-    const fn: (value: number) => Promise<number> = async (value: number) => value;
-    const tapFn: (value: number) => Promise<void> = fn as unknown as (value: number) => Promise<void>;
-    const nextIO: EitherIO<string, number> = eitherFailIO.tap(tapFn);
+    const nextIO: EitherIO<string, number> = eitherFailIO.tap((value: number) => value);
     await expect(nextIO.unsafeRun()).rejects.toEqual(errorMessage);
   });
 

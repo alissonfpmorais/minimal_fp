@@ -45,16 +45,12 @@ describe('Testing IO Monad', () => {
   });
 
   it('Tapping a successful IO should not change the content', async () => {
-    const fn: (value: number) => Promise<number> = async (value: number) => value;
-    const tapFn: (value: number) => Promise<void> = fn as unknown as (value: number) => Promise<void>;
-    const value: number = await io.tap(tapFn).unsafeRun();
+    const value: number = await io.tap((value: number) => value).unsafeRun();
     expect(value).toEqual(rightValue);
   });
 
   it('Tapping a failed IO and unsafe runnning it should raise error', async () => {
-    const fn: (value: number) => Promise<number> = async (value: number) => value;
-    const tapFn: (value: number) => Promise<void> = fn as unknown as (value: number) => Promise<void>;
-    const nextIO: IO<number> = failIO.tap(tapFn);
+    const nextIO: IO<number> = failIO.tap((value: number) => value);
     await expect(nextIO.unsafeRun()).rejects.toThrow(errorMessage);
   });
 

@@ -38,7 +38,7 @@ export class IO<Value> {
     });
   }
 
-  tap(fn: (value: Value) => Promise<void> | void): IO<Value> {
+  tap(fn: (value: Value) => Promise<unknown> | unknown): IO<Value> {
     return new IO(async () => {
       const value: Value = await this._sideEffect();
       await fn(value);
