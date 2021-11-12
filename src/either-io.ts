@@ -26,8 +26,12 @@ export class EitherIO<Left, Right> {
 
   static from<Left, Right>(defaultErrorFn: ErrorFn<Left>, fn: () => Promise<Right> | Right): EitherIO<Left, Right> {
     return EitherIO.fromEither(defaultErrorFn, async () => {
-      const value: Right = await fn();
-      return Either.right(value);
+      try {
+        const value: Right = await fn();
+        return Either.right(value);
+      } catch (error) {
+        return Either.left(defaultErrorFn(error));
+      }
     });
   }
 
