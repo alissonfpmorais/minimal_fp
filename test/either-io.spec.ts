@@ -213,8 +213,20 @@ describe('Testing EitherIO Monad', () => {
     expect(either.getLeft).toThrow('No left value found');
   });
 
-  it('Safe run failed IO should return Either Right', async () => {
+  it('Safe run failed IO should return Either Left', async () => {
     const either: Either<string, number> = await eitherFailIO.safeRun();
+    expect(either.getRight).toThrow('No right value found');
+    expect(either.getLeft()).toEqual(errorMessage);
+  });
+
+  it('Creating EitherIO from Either but using throwable promise should return Either Left', async () => {
+    const eitherIO: EitherIO<string, number> = EitherIO.fromEither(
+      () => errorMessage,
+      async () => {
+        throw new Error();
+      },
+    );
+    const either: Either<string, number> = await eitherIO.safeRun();
     expect(either.getRight).toThrow('No right value found');
     expect(either.getLeft()).toEqual(errorMessage);
   });

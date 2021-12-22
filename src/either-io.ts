@@ -20,19 +20,30 @@ export class EitherIO<Left, Right> {
   ): EitherIO<Left, Right> {
     return new EitherIO(
       defaultErrorFn,
-      IO.from(() => fn()),
+      IO.from(async () => {
+        try {
+          const either: Either<Left, Right> = await fn();
+          if (either instanceof Either) return either;
+          return Either.left(defaultErrorFn('Not instance of Either'));
+        } catch (error) {
+          return Either.left(defaultErrorFn(error));
+        }
+      }),
     );
   }
 
   static from<Left, Right>(defaultErrorFn: ErrorFn<Left>, fn: () => Promise<Right> | Right): EitherIO<Left, Right> {
-    return EitherIO.fromEither(defaultErrorFn, async () => {
-      try {
-        const value: Right = await fn();
-        return Either.right(value);
-      } catch (error) {
-        return Either.left(defaultErrorFn(error));
-      }
-    });
+    return new EitherIO(
+      defaultErrorFn,
+      IO.from(async () => {
+        try {
+          const value: Right = await fn();
+          return Either.right(value);
+        } catch (error) {
+          return Either.left(defaultErrorFn(error));
+        }
+      }),
+    );
   }
 
   static raise<Left, Right>(errorFn: () => Left): EitherIO<Left, Right> {
