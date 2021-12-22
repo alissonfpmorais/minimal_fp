@@ -28,7 +28,7 @@ describe('Testing EitherIO Monad', () => {
     const anotherIO: EitherIO<string, number> = EitherIO.from(
       () => errorMessage,
       async () => {
-        throw new Error();
+        throw new Error('error');
       },
     );
     await expect(anotherIO.unsafeRun()).rejects.toEqual(errorMessage);
@@ -198,13 +198,23 @@ describe('Testing EitherIO Monad', () => {
   });
 
   it("Catch a successful EitherIO should keep EitherIO's value", async () => {
-    const value: number = await eitherIO.catch(() => 52).unsafeRun();
+    const value: number = await eitherIO.catch(() => Either.right(52)).unsafeRun();
     expect(value).toEqual(rightValue);
   });
 
   it('Catch a failed EitherIO should map left content to new value', async () => {
-    const value: number = await eitherFailIO.catch(() => 52).unsafeRun();
+    const value: number = await eitherFailIO.catch(() => Either.right(52)).unsafeRun();
     expect(value).toEqual(52);
+  });
+
+  it('Catch a failed EitherIO should map left content to new value', async () => {
+    const either: Either<string, number> = await eitherFailIO
+      .catch(() => {
+        throw new Error('error');
+      })
+      .safeRun();
+    expect(either.getRight).toThrow('No right value found');
+    expect(either.getLeft()).toEqual(errorMessage);
   });
 
   it('Safe run successful EitherIO should return Either Right', async () => {
@@ -223,7 +233,7 @@ describe('Testing EitherIO Monad', () => {
     const eitherIO: EitherIO<string, number> = EitherIO.fromEither(
       () => errorMessage,
       async () => {
-        throw new Error();
+        throw new Error('error');
       },
     );
     const either: Either<string, number> = await eitherIO.safeRun();
@@ -257,7 +267,7 @@ describe('Testing EitherIO Monad', () => {
       })
       .catch(() => {
         message = message + ' ';
-        return 42;
+        return Either.right(42);
       })
       .map((value: number) => {
         message = message + 'p';
@@ -283,7 +293,7 @@ describe('Testing EitherIO Monad', () => {
       })
       .catch(() => {
         message = message + 'c';
-        return 42;
+        return Either.right(42);
       })
       .zip(eitherIO, (value1: number, value2: number) => {
         message = message + 'i';
@@ -295,7 +305,7 @@ describe('Testing EitherIO Monad', () => {
       })
       .catch(() => {
         message = message + 's';
-        return 42;
+        return Either.right(42);
       })
       .safeRun();
 

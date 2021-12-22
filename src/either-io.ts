@@ -130,14 +130,14 @@ export class EitherIO<Left, Right> {
     });
   }
 
-  catch(fn: (error: Left) => Promise<Right> | Right): EitherIO<Left, Right> {
-    const callback: () => Promise<Right> = async () => {
+  catch(fn: (error: Left) => Promise<Either<Left, Right>> | Either<Left, Right>): EitherIO<Left, Right> {
+    const callback: () => Promise<Either<Left, Right>> = async () => {
       const either: Either<Left, Right> = await this.safeRun();
       if (either.isLeft()) return fn(either.getLeft());
-      return either.getRight();
+      return either;
     };
 
-    return EitherIO.from(this._defaultErrorFn, callback);
+    return EitherIO.fromEither(this._defaultErrorFn, callback);
   }
 
   async unsafeRun(): Promise<Right> {
