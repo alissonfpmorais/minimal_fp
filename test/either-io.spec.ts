@@ -245,11 +245,11 @@ describe('Testing EitherIO Monad', () => {
     let message: string = '';
     const anotherFailIO: EitherIO<string, number> = eitherIO
       .map((value: number) => {
-        message = message + 'o';
+        message = message + 'u';
         return value * 10;
       })
       .flatMap(() => {
-        message = message + 'u';
+        message = message + 's';
         throw new Error('error');
       });
     const result: Either<string, number> = await eitherIO
@@ -295,8 +295,15 @@ describe('Testing EitherIO Monad', () => {
         message = message + 'c';
         return Either.right(42);
       })
+      .filter(
+        () => 'error',
+        async (value: number) => {
+          message = message + 'i';
+          return value > 0;
+        },
+      )
       .zip(eitherIO, (value1: number, value2: number) => {
-        message = message + 'i';
+        message = message + 'o';
         return value1 / 2 + value2 / 2;
       })
       .zip(anotherFailIO, (value1: number, value2: number) => {
@@ -304,12 +311,12 @@ describe('Testing EitherIO Monad', () => {
         return value1 / 2 + value2 / 2;
       })
       .catch(() => {
-        message = message + 's';
+        message = message + '!';
         return Either.right(42);
       })
       .safeRun();
 
     expect(result.getRight()).toEqual(42);
-    expect(message).toEqual('my precious');
+    expect(message).toEqual('my precious!');
   });
 });

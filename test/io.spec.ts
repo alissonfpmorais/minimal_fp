@@ -181,13 +181,20 @@ describe('Testing IO Monad', () => {
         message = message + 'u';
         return 42;
       })
+      .filter(
+        () => new Error('error'),
+        async (value: number) => {
+          message = message + 's';
+          return value > 0;
+        },
+      )
       .zip(io, (value1: number, value2: number) => {
-        message = message + 's';
+        message = message + '!';
         return value1 / 2 + value2 / 2;
       })
       .safeRun();
 
     expect(result.getRight()).toEqual(42);
-    expect(message).toEqual('precious');
+    expect(message).toEqual('precious!');
   });
 });

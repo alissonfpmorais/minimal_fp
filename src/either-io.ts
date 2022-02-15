@@ -76,16 +76,24 @@ export class EitherIO<Left, Right> {
 
   tap(fn: (value: Right) => Promise<unknown> | unknown): EitherIO<Left, Right> {
     return this.flatMap(async (value: Right) => {
-      Promise.resolve()
-        .then(() => fn(value))
-        .finally();
+      try {
+        await fn(value);
+      } catch (_error) {
+        // noop
+      }
+
       return EitherIO.of(this._defaultErrorFn, value);
     });
   }
 
-  filter(errorFn: () => Left, fn: (value: Right) => boolean): EitherIO<Left, Right> {
+  filter(errorFn: () => Left, fn: (value: Right) => boolean | Promise<boolean>): EitherIO<Left, Right> {
     return this.flatMap(async (value: Right) => {
-      return fn(value) ? EitherIO.of(this._defaultErrorFn, value) : EitherIO.raise(errorFn);
+      try {
+        const isValid: boolean = await fn(value);
+        return isValid ? EitherIO.of(this._defaultErrorFn, value) : EitherIO.raise(errorFn);
+      } catch (error) {
+        return EitherIO.raise(errorFn);
+      }
     });
   }
 

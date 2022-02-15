@@ -46,10 +46,11 @@ export class IO<Value> {
     });
   }
 
-  filter(errorFn: () => Error, fn: (value: Value) => boolean): IO<Value> {
+  filter(errorFn: () => Error, fn: (value: Value) => boolean | Promise<boolean>): IO<Value> {
     return new IO(async () => {
       const value: Value = await this._sideEffect();
-      if (!fn(value)) throw errorFn();
+      const isValid: boolean = await fn(value);
+      if (!isValid) throw errorFn();
       return value;
     });
   }
