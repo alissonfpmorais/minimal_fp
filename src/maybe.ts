@@ -16,7 +16,7 @@ export abstract class Maybe<SomeType> {
   abstract flatMap<NextType>(fn: (x: SomeType) => Maybe<NextType>): Maybe<NextType>;
   abstract getSome(): SomeType | never;
   abstract getOrDefault(def: SomeType): SomeType;
-  abstract toEither<Left>(defaultValue: Left): Either<Left, SomeType>;
+  abstract toEither<Left>(leftValue: Left): Either<Left, SomeType>;
 }
 
 export class Some<Type> extends Maybe<Type> {
@@ -54,14 +54,14 @@ export class Some<Type> extends Maybe<Type> {
 
   filter(fn: (SomeType: Type) => boolean | never): Maybe<Type> {
     try {
-      if (fn(this._data)) return Some.of(this._data);
+      if (fn(this._data)) return this;
       else return Nothing.instanciate();
     } catch {
       return Nothing.instanciate();
     }
   }
 
-  toEither<Left>(_defaultValue: Left): Either<Left, Type> {
+  toEither<Left>(_leftValue: Left): Either<Left, Type> {
     return Either.right(this._data);
   }
 }
@@ -87,23 +87,23 @@ export class Nothing extends Maybe<never> {
     throw new Error("Value doesn't exist!");
   }
 
-  getOrDefault<Type>(def: Type): Type {
-    return def;
+  getOrDefault<Type>(defaultValue: Type): Type {
+    return defaultValue;
   }
 
   map(_fn: (value: never) => unknown): Nothing {
-    return this as unknown as Nothing;
+    return this;
   }
 
   flatMap(_fn: (value: never) => Maybe<unknown>): Nothing {
-    return this as unknown as Nothing;
+    return this;
   }
 
   filter(_fn: (SomeType: never) => boolean | never): Nothing {
-    return Nothing.instanciate();
+    return this;
   }
 
-  toEither<Left>(defaultValue: Left): Either<Left, never> {
-    return Either.left(defaultValue);
+  toEither<Left>(leftValue: Left): Either<Left, never> {
+    return Either.left(leftValue);
   }
 }

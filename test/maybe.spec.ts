@@ -13,7 +13,7 @@ describe('Testing Maybe Monad', () => {
       expect(nothing.isNothing()).toEqual(true);
     });
 
-    it('Getting some value with default of a Nothing item should raise an error', () => {
+    it('Getting some value with default of a Nothing should show the default value', () => {
       const nothing = Maybe.nothing();
       expect(nothing.getOrDefault(10)).toEqual(10);
     });
@@ -35,7 +35,7 @@ describe('Testing Maybe Monad', () => {
       expect(newNothing.getSome).toThrow();
     });
 
-    it('Mapping a Nothing item to Some item should not change the result', () => {
+    it('Mapping a Nothing item to some value should not change the result', () => {
       const nothing = Maybe.nothing();
       const newNothing = nothing.map((_value) => 10);
       expect(newNothing.getSome).toThrow();
@@ -90,13 +90,13 @@ describe('Testing Maybe Monad', () => {
       expect(newSome.getSome).toThrow();
     });
 
-    it('Mapping a Some item to Some item should change the result', () => {
+    it('Mapping a Some item to something should change the result', () => {
       const some = Maybe.some('hello');
       const newSome = some.map((_value) => 10);
       expect(newSome.getSome()).toEqual(10);
     });
 
-    it('Filtering a Some item should result in Some if predicable results true, or Nothing on false or exception', () => {
+    it('Filtering a Some item should result in Some if predicate results true, or Nothing on false or exception', () => {
       const some = Maybe.some('hello');
 
       const newSome1 = some.filter((value) => typeof value === 'string');
