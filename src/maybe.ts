@@ -45,11 +45,19 @@ export class Some<Type> extends Maybe<Type> {
   }
 
   map<NextType>(fn: (value: Type) => NextType): Maybe<NextType> {
-    return Some.of(fn(this.getSome()));
+    try {
+      return Some.of(fn(this.getSome()));
+    } catch {
+      return Nothing.instanciate();
+    }
   }
 
   flatMap<NextType>(fn: (value: Type) => Maybe<NextType>): Maybe<NextType> {
-    return fn(this.getSome());
+    try {
+      return fn(this.getSome());
+    } catch {
+      return Nothing.instanciate();
+    }
   }
 
   filter(fn: (SomeType: Type) => boolean | never): Maybe<Type> {

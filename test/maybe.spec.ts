@@ -86,14 +86,26 @@ describe('Testing Maybe Monad', () => {
 
     it('Flat mapping a Some item to Nothing item should change to Nothing', () => {
       const some = Maybe.some('hello');
-      const newSome = some.flatMap((_value) => Maybe.nothing());
-      expect(newSome.getSome).toThrow();
+
+      const newSome1 = some.flatMap((_value) => Maybe.nothing());
+      const newSome2 = some.flatMap((_value) => {
+        throw new Error();
+      });
+
+      expect(newSome1.getSome).toThrow();
+      expect(newSome2.isNothing()).toEqual(true);
     });
 
-    it('Mapping a Some item to something should change the result', () => {
+    it('Mapping a Some item to something should change the result to value, or to Nothing if exception occurs', () => {
       const some = Maybe.some('hello');
-      const newSome = some.map((_value) => 10);
-      expect(newSome.getSome()).toEqual(10);
+
+      const newSome1 = some.map((_value) => 10);
+      const newSome2 = some.map((_value) => {
+        throw new Error();
+      });
+
+      expect(newSome1.getSome()).toEqual(10);
+      expect(newSome2.isNothing()).toEqual(true);
     });
 
     it('Filtering a Some item should result in Some if predicate results true, or Nothing on false or exception', () => {
