@@ -2,7 +2,8 @@ import { Either } from './either';
 import { IO } from './io';
 
 export type ErrorFn<Left> = (error: unknown) => Left;
-export type FailureFn<Left> = (error: unknown) => Left | Error;
+
+type FailureFn<Left> = (error: unknown) => Left | Error;
 
 export class EitherIO<Left, Right> {
   private readonly _defaultFailureFn: FailureFn<Left>;
