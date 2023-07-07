@@ -6,25 +6,25 @@ export type FailureFn<Left> = (error: unknown) => Left | Error;
 
 export const CRITICAL_ERROR: string = `Critical error! Does not throw an exception inside the error handler!`;
 
-const makeErrorWrapper =
-  <Left>(defaultErrorFn: ErrorFn<Left>) =>
-  (error: unknown): Left | Error => {
-    try {
-      return defaultErrorFn(error);
-    } catch (error) {
-      return new Error(CRITICAL_ERROR);
-    }
-  };
-
 export class EitherIO<Left, Right> {
   private readonly _defaultFailureFn: FailureFn<Left>;
 
   constructor(private readonly _defaultErrorFn: ErrorFn<Left>, private readonly _io: IO<Either<Left | Error, Right>>) {
-    this._defaultFailureFn = makeErrorWrapper(_defaultErrorFn);
+    this._defaultFailureFn = EitherIO._makeErrorWrapper(_defaultErrorFn);
   }
 
   get io(): IO<Either<Left | Error, Right>> {
     return this._io as IO<Either<Left | Error, Right>>;
+  }
+
+  private static _makeErrorWrapper<Left>(defaultErrorFn: ErrorFn<Left>): FailureFn<Left> {
+    return (error: unknown): Left | Error => {
+      try {
+        return defaultErrorFn(error);
+      } catch (error) {
+        return new Error(CRITICAL_ERROR);
+      }
+    };
   }
 
   static of<Left, Right>(defaultErrorFn: ErrorFn<Left>, value: Right): EitherIO<Left, Right> {
@@ -38,7 +38,7 @@ export class EitherIO<Left, Right> {
     return new EitherIO(
       defaultErrorFn,
       IO.from(async () => {
-        const defaultFailureFn: FailureFn<Left> = makeErrorWrapper(defaultErrorFn);
+        const defaultFailureFn: FailureFn<Left> = EitherIO._makeErrorWrapper(defaultErrorFn);
 
         try {
           const either: Either<Left, Right> = await fn();
@@ -55,7 +55,7 @@ export class EitherIO<Left, Right> {
     return new EitherIO(
       defaultErrorFn,
       IO.from(async () => {
-        const defaultFailureFn: FailureFn<Left> = makeErrorWrapper(defaultErrorFn);
+        const defaultFailureFn: FailureFn<Left> = EitherIO._makeErrorWrapper(defaultErrorFn);
 
         try {
           const value: Right = await fn();
@@ -68,7 +68,7 @@ export class EitherIO<Left, Right> {
   }
 
   static raise<Left, Right>(errorFn: () => Left): EitherIO<Left, Right> {
-    const defaultFailureFn: FailureFn<Left> = makeErrorWrapper(errorFn);
+    const defaultFailureFn: FailureFn<Left> = EitherIO._makeErrorWrapper(errorFn);
     return new EitherIO(errorFn, IO.of(Either.left(defaultFailureFn(undefined))));
   }
 
@@ -145,7 +145,7 @@ export class EitherIO<Left, Right> {
         const eitherIO: EitherIO<NextLeft, Right> = await fn(either.getLeft());
         return eitherIO.io;
       } catch (error) {
-        const nextDefaultFailureFn: FailureFn<NextLeft> = makeErrorWrapper(nextDefaultErrorFn);
+        const nextDefaultFailureFn: FailureFn<NextLeft> = EitherIO._makeErrorWrapper(nextDefaultErrorFn);
         return IO.of(Either.left(nextDefaultFailureFn(error)));
       }
     });
