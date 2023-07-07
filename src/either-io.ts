@@ -2,12 +2,29 @@ import { Either } from './either';
 import { IO } from './io';
 
 export type ErrorFn<Left> = (error: unknown) => Left;
+export type FailureFn<Left> = (error: unknown) => Left | Error;
+
+const makeErrorWrapper =
+  <Left>(defaultErrorFn: ErrorFn<Left>) =>
+  (error: unknown): Left | Error => {
+    try {
+      return defaultErrorFn(error);
+    } catch (error) {
+      return new Error(EitherIO.criticalError);
+    }
+  };
 
 export class EitherIO<Left, Right> {
-  constructor(private readonly _defaultErrorFn: ErrorFn<Left>, private readonly _io: IO<Either<Left, Right>>) {}
+  static criticalError: string = `Critical error! Does not throw an exception inside the error handler!`;
 
-  get io(): IO<Either<Left, Right>> {
-    return this._io as IO<Either<Left, Right>>;
+  private readonly _defaultFailureFn: FailureFn<Left>;
+
+  constructor(private readonly _defaultErrorFn: ErrorFn<Left>, private readonly _io: IO<Either<Left | Error, Right>>) {
+    this._defaultFailureFn = makeErrorWrapper(_defaultErrorFn);
+  }
+
+  get io(): IO<Either<Left | Error, Right>> {
+    return this._io as IO<Either<Left | Error, Right>>;
   }
 
   static of<Left, Right>(defaultErrorFn: ErrorFn<Left>, value: Right): EitherIO<Left, Right> {
@@ -21,12 +38,14 @@ export class EitherIO<Left, Right> {
     return new EitherIO(
       defaultErrorFn,
       IO.from(async () => {
+        const defaultFailureFn: FailureFn<Left> = makeErrorWrapper(defaultErrorFn);
+
         try {
           const either: Either<Left, Right> = await fn();
           if (either instanceof Either) return either;
-          return Either.left(defaultErrorFn('Not instance of Either'));
+          return Either.left(defaultFailureFn('Not instance of Either'));
         } catch (error) {
-          return Either.left(defaultErrorFn(error));
+          return Either.left(defaultFailureFn(error));
         }
       }),
     );
@@ -36,33 +55,38 @@ export class EitherIO<Left, Right> {
     return new EitherIO(
       defaultErrorFn,
       IO.from(async () => {
+        const defaultFailureFn: FailureFn<Left> = makeErrorWrapper(defaultErrorFn);
+
         try {
           const value: Right = await fn();
           return Either.right(value);
         } catch (error) {
-          return Either.left(defaultErrorFn(error));
+          return Either.left(defaultFailureFn(error));
         }
       }),
     );
   }
 
   static raise<Left, Right>(errorFn: () => Left): EitherIO<Left, Right> {
-    return new EitherIO(errorFn, IO.of(Either.left(errorFn())));
+    const defaultFailureFn: FailureFn<Left> = makeErrorWrapper(errorFn);
+    return new EitherIO(errorFn, IO.of(Either.left(defaultFailureFn(undefined))));
   }
 
   flatMap<NextRight>(
     fn: (value: Right, errorFn: ErrorFn<Left>) => Promise<EitherIO<Left, NextRight>> | EitherIO<Left, NextRight>,
   ): EitherIO<Left, NextRight> {
-    const nextIO: IO<Either<Left, NextRight>> = this._io.flatMap(async (either: Either<Left, Right>) => {
-      if (either.isLeft()) return IO.of(either) as unknown as IO<Either<Left, NextRight>>;
+    const nextIO: IO<Either<Left | Error, NextRight>> = this._io.flatMap(
+      async (either: Either<Left | Error, Right>) => {
+        if (either.isLeft()) return IO.of(either) as unknown as IO<Either<Left | Error, NextRight>>;
 
-      try {
-        const eitherIO: EitherIO<Left, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
-        return eitherIO.io;
-      } catch (error) {
-        return IO.of(Either.left(this._defaultErrorFn(error)));
-      }
-    });
+        try {
+          const eitherIO: EitherIO<Left | Error, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
+          return eitherIO.io;
+        } catch (error) {
+          return IO.of(Either.left(this._defaultFailureFn(error)));
+        }
+      },
+    );
 
     return new EitherIO(this._defaultErrorFn, nextIO);
   }
@@ -102,7 +126,7 @@ export class EitherIO<Left, Right> {
     fn: (value1: Right, value2: OtherRight) => Promise<NextRight> | NextRight,
   ): EitherIO<Left, NextRight> {
     return this.flatMap(async (value: Right) => {
-      const either: Either<Left, OtherRight> = await eitherIoMonad.safeRun();
+      const either: Either<Left | Error, OtherRight> = await eitherIoMonad.safeRun();
       if (either.isLeft())
         return EitherIO.fromEither(this._defaultErrorFn, () => either) as unknown as EitherIO<Left, NextRight>;
       const nextValue: NextRight = await fn(value, either.getRight());
@@ -114,14 +138,15 @@ export class EitherIO<Left, Right> {
     nextDefaultErrorFn: ErrorFn<NextLeft>,
     fn: (error: Left) => Promise<EitherIO<NextLeft, Right>> | EitherIO<NextLeft, Right>,
   ): EitherIO<NextLeft, Right> {
-    const nextIO: IO<Either<NextLeft, Right>> = this._io.flatMap(async (either: Either<Left, Right>) => {
-      if (either.isRight()) return IO.of(either) as unknown as IO<Either<NextLeft, Right>>;
+    const nextIO: IO<Either<NextLeft | Error, Right>> = this._io.flatMap(async (either: Either<Left, Right>) => {
+      if (either.isRight()) return IO.of(either) as unknown as IO<Either<NextLeft | Error, Right>>;
 
       try {
         const eitherIO: EitherIO<NextLeft, Right> = await fn(either.getLeft());
         return eitherIO.io;
       } catch (error) {
-        return IO.of(Either.left(nextDefaultErrorFn(error)));
+        const nextDefaultFailureFn: FailureFn<NextLeft> = makeErrorWrapper(nextDefaultErrorFn);
+        return IO.of(Either.left(nextDefaultFailureFn(error)));
       }
     });
 
@@ -138,25 +163,25 @@ export class EitherIO<Left, Right> {
     });
   }
 
-  catch(fn: (error: Left) => Promise<Either<Left, Right>> | Either<Left, Right>): EitherIO<Left, Right> {
+  catch(fn: (error: Left | Error) => Promise<Either<Left, Right>> | Either<Left, Right>): EitherIO<Left, Right> {
     const callback: () => Promise<Either<Left, Right>> = async () => {
-      const either: Either<Left, Right> = await this.safeRun();
+      const either: Either<Left | Error, Right> = await this.safeRun();
       if (either.isLeft()) return fn(either.getLeft());
-      return either;
+      return either as Either<Left, Right>;
     };
 
     return EitherIO.fromEither(this._defaultErrorFn, callback);
   }
 
   async unsafeRun(): Promise<Right> {
-    const either: Either<Left, Right> = await this._io.unsafeRun();
+    const either: Either<Left | Error, Right> = await this._io.unsafeRun();
     if (either.isLeft()) throw either.getLeft();
     return either.getRight();
   }
 
-  async safeRun(): Promise<Either<Left, Right>> {
-    const either: Either<Error, Either<Left, Right>> = await this._io.safeRun();
-    if (either.isLeft()) Either.right(this._defaultErrorFn);
+  async safeRun(): Promise<Either<Left | Error, Right>> {
+    const either: Either<Error, Either<Left | Error, Right>> = await this._io.safeRun();
+    if (either.isLeft()) return either as unknown as Either<Left | Error, Right>;
     return either.getRight();
   }
 }

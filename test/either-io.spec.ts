@@ -208,7 +208,7 @@ describe('Testing EitherIO Monad', () => {
   });
 
   it('Catch a failed EitherIO should map left content to new value', async () => {
-    const either: Either<string, number> = await eitherFailIO
+    const either: Either<string | Error, number> = await eitherFailIO
       .catch(() => {
         throw new Error('error');
       })
@@ -218,13 +218,13 @@ describe('Testing EitherIO Monad', () => {
   });
 
   it('Safe run successful EitherIO should return Either Right', async () => {
-    const either: Either<string, number> = await eitherIO.safeRun();
+    const either: Either<string | Error, number> = await eitherIO.safeRun();
     expect(either.getRight()).toEqual(rightValue);
     expect(either.getLeft).toThrow('No left value found');
   });
 
   it('Safe run failed IO should return Either Left', async () => {
-    const either: Either<string, number> = await eitherFailIO.safeRun();
+    const either: Either<string | Error, number> = await eitherFailIO.safeRun();
     expect(either.getRight).toThrow('No right value found');
     expect(either.getLeft()).toEqual(errorMessage);
   });
@@ -236,9 +236,30 @@ describe('Testing EitherIO Monad', () => {
         throw new Error('error');
       },
     );
-    const either: Either<string, number> = await eitherIO.safeRun();
+    const either: Either<string | Error, number> = await eitherIO.safeRun();
     expect(either.getRight).toThrow('No right value found');
     expect(either.getLeft()).toEqual(errorMessage);
+  });
+
+  it('Throwing inside error handler should not break EitherIO', async () => {
+    const nextErrorMessage: string = errorMessage + ' 2';
+    const eitherIO: EitherIO<string, number> = EitherIO.from(
+      () => {
+        throw new Error(errorMessage);
+      },
+      () => {
+        throw new Error('Throw inside start handler');
+      },
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      /** @ts-ignore */
+    ).catch((error: never) => {
+      expect(error).toEqual(errorMessage);
+      return Either.left(nextErrorMessage);
+    });
+
+    const either: Either<string | Error, number> = await eitherIO.safeRun();
+    expect(either.getRight).toThrow('No right value found');
+    expect(either.getLeft()).toEqual(new Error(EitherIO.criticalError));
   });
 
   it('Check if EitherIO operators run properly', async () => {
@@ -252,7 +273,7 @@ describe('Testing EitherIO Monad', () => {
         message = message + 's';
         throw new Error('error');
       });
-    const result: Either<string, number> = await eitherIO
+    const result: Either<string | Error, number> = await eitherIO
       .flatMap((value: number, errorFn: ErrorFn<string>) => {
         message = message + 'm';
         return EitherIO.of(errorFn, value / 2);
