@@ -4,19 +4,19 @@ import { IO } from './io';
 export type ErrorFn<Left> = (error: unknown) => Left;
 export type FailureFn<Left> = (error: unknown) => Left | Error;
 
+export const CRITICAL_ERROR: string = `Critical error! Does not throw an exception inside the error handler!`;
+
 const makeErrorWrapper =
   <Left>(defaultErrorFn: ErrorFn<Left>) =>
   (error: unknown): Left | Error => {
     try {
       return defaultErrorFn(error);
     } catch (error) {
-      return new Error(EitherIO.criticalError);
+      return new Error(CRITICAL_ERROR);
     }
   };
 
 export class EitherIO<Left, Right> {
-  static criticalError: string = `Critical error! Does not throw an exception inside the error handler!`;
-
   private readonly _defaultFailureFn: FailureFn<Left>;
 
   constructor(private readonly _defaultErrorFn: ErrorFn<Left>, private readonly _io: IO<Either<Left | Error, Right>>) {
