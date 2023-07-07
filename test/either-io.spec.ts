@@ -1,4 +1,4 @@
-import { CRITICAL_ERROR, Either, EitherIO, ErrorFn } from '../src';
+import { Either, EitherIO, ErrorFn } from '../src';
 
 describe('Testing EitherIO Monad', () => {
   const rightValue: number = 42;
@@ -259,7 +259,9 @@ describe('Testing EitherIO Monad', () => {
 
     const either: Either<string | Error, number> = await eitherIO.safeRun();
     expect(either.getRight).toThrow('No right value found');
-    expect(either.getLeft()).toEqual(new Error(CRITICAL_ERROR));
+    expect(either.getLeft()).toEqual(
+      new Error(`Critical error! Does not throw an exception inside the error handler!`),
+    );
   });
 
   it('Check if EitherIO operators run properly', async () => {

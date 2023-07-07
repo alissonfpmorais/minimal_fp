@@ -4,8 +4,6 @@ import { IO } from './io';
 export type ErrorFn<Left> = (error: unknown) => Left;
 export type FailureFn<Left> = (error: unknown) => Left | Error;
 
-export const CRITICAL_ERROR: string = `Critical error! Does not throw an exception inside the error handler!`;
-
 export class EitherIO<Left, Right> {
   private readonly _defaultFailureFn: FailureFn<Left>;
 
@@ -22,7 +20,7 @@ export class EitherIO<Left, Right> {
       try {
         return defaultErrorFn(error);
       } catch (error) {
-        return new Error(CRITICAL_ERROR);
+        return new Error(`Critical error! Does not throw an exception inside the error handler!`);
       }
     };
   }
