@@ -8,12 +8,12 @@ type FailureFn<Left> = (error: unknown) => Left | Error;
 export class EitherIO<Left, Right> {
   private readonly _defaultFailureFn: FailureFn<Left>;
 
-  constructor(private readonly _defaultErrorFn: ErrorFn<Left>, private readonly _io: IO<Either<Left | Error, Right>>) {
+  constructor(private readonly _defaultErrorFn: ErrorFn<Left>, private readonly _io: IO<Either<Left, Right>>) {
     this._defaultFailureFn = EitherIO._makeErrorWrapper(_defaultErrorFn);
   }
 
-  get io(): IO<Either<Left | Error, Right>> {
-    return this._io as IO<Either<Left | Error, Right>>;
+  get io(): IO<Either<Left, Right>> {
+    return this._io as IO<Either<Left, Right>>;
   }
 
   private static _makeErrorWrapper<Left>(defaultErrorFn: ErrorFn<Left>): FailureFn<Left> {
@@ -34,6 +34,8 @@ export class EitherIO<Left, Right> {
     defaultErrorFn: ErrorFn<Left>,
     fn: () => Promise<Either<Left, Right>> | Either<Left, Right>,
   ): EitherIO<Left, Right> {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
     return new EitherIO(
       defaultErrorFn,
       IO.from(async () => {
@@ -51,6 +53,8 @@ export class EitherIO<Left, Right> {
   }
 
   static from<Left, Right>(defaultErrorFn: ErrorFn<Left>, fn: () => Promise<Right> | Right): EitherIO<Left, Right> {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
     return new EitherIO(
       defaultErrorFn,
       IO.from(async () => {
@@ -68,24 +72,27 @@ export class EitherIO<Left, Right> {
 
   static raise<Left, Right>(errorFn: () => Left): EitherIO<Left, Right> {
     const defaultFailureFn: FailureFn<Left> = EitherIO._makeErrorWrapper(errorFn);
-    return new EitherIO(errorFn, IO.of(Either.left(defaultFailureFn(undefined))));
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
+    const either: Either<Left, Right> = Either.left(defaultFailureFn(undefined));
+    return new EitherIO(errorFn, IO.of(either));
   }
 
   flatMap<NextRight>(
     fn: (value: Right, errorFn: ErrorFn<Left>) => Promise<EitherIO<Left, NextRight>> | EitherIO<Left, NextRight>,
   ): EitherIO<Left, NextRight> {
-    const nextIO: IO<Either<Left | Error, NextRight>> = this._io.flatMap(
-      async (either: Either<Left | Error, Right>) => {
-        if (either.isLeft()) return IO.of(either) as unknown as IO<Either<Left | Error, NextRight>>;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
+    const nextIO: IO<Either<Left, NextRight>> = this._io.flatMap(async (either: Either<Left, Right>) => {
+      if (either.isLeft()) return IO.of(either) as unknown as IO<Either<Left, NextRight>>;
 
-        try {
-          const eitherIO: EitherIO<Left | Error, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
-          return eitherIO.io;
-        } catch (error) {
-          return IO.of(Either.left(this._defaultFailureFn(error)));
-        }
-      },
-    );
+      try {
+        const eitherIO: EitherIO<Left, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
+        return eitherIO.io;
+      } catch (error) {
+        return IO.of(Either.left(this._defaultFailureFn(error)));
+      }
+    });
 
     return new EitherIO(this._defaultErrorFn, nextIO);
   }
@@ -125,7 +132,9 @@ export class EitherIO<Left, Right> {
     fn: (value1: Right, value2: OtherRight) => Promise<NextRight> | NextRight,
   ): EitherIO<Left, NextRight> {
     return this.flatMap(async (value: Right) => {
-      const either: Either<Left | Error, OtherRight> = await eitherIoMonad.safeRun();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      /** @ts-ignore */
+      const either: Either<Left, OtherRight> = await eitherIoMonad.safeRun();
       if (either.isLeft())
         return EitherIO.fromEither(this._defaultErrorFn, () => either) as unknown as EitherIO<Left, NextRight>;
       const nextValue: NextRight = await fn(value, either.getRight());
@@ -137,8 +146,10 @@ export class EitherIO<Left, Right> {
     nextDefaultErrorFn: ErrorFn<NextLeft>,
     fn: (error: Left) => Promise<EitherIO<NextLeft, Right>> | EitherIO<NextLeft, Right>,
   ): EitherIO<NextLeft, Right> {
-    const nextIO: IO<Either<NextLeft | Error, Right>> = this._io.flatMap(async (either: Either<Left, Right>) => {
-      if (either.isRight()) return IO.of(either) as unknown as IO<Either<NextLeft | Error, Right>>;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
+    const nextIO: IO<Either<NextLeft, Right>> = this._io.flatMap(async (either: Either<Left, Right>) => {
+      if (either.isRight()) return IO.of(either) as unknown as IO<Either<NextLeft, Right>>;
 
       try {
         const eitherIO: EitherIO<NextLeft, Right> = await fn(either.getLeft());
@@ -162,25 +173,30 @@ export class EitherIO<Left, Right> {
     });
   }
 
-  catch(fn: (error: Left | Error) => Promise<Either<Left, Right>> | Either<Left, Right>): EitherIO<Left, Right> {
+  catch(fn: (error: Left) => Promise<Either<Left, Right>> | Either<Left, Right>): EitherIO<Left, Right> {
     const callback: () => Promise<Either<Left, Right>> = async () => {
-      const either: Either<Left | Error, Right> = await this.safeRun();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      /** @ts-ignore */
+      const either: Either<Left, Right> = await this.safeRun();
       if (either.isLeft()) return fn(either.getLeft());
-      return either as Either<Left, Right>;
+      return either;
     };
 
     return EitherIO.fromEither(this._defaultErrorFn, callback);
   }
 
   async unsafeRun(): Promise<Right> {
-    const either: Either<Left | Error, Right> = await this._io.unsafeRun();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
+    const either: Either<Left, Right> = await this._io.unsafeRun();
     if (either.isLeft()) throw either.getLeft();
     return either.getRight();
   }
 
-  async safeRun(): Promise<Either<Left | Error, Right>> {
-    const either: Either<Error, Either<Left | Error, Right>> = await this._io.safeRun();
-    if (either.isLeft()) return either as unknown as Either<Left | Error, Right>;
-    return either.getRight();
+  async safeRun(): Promise<Either<Left, Right>> {
+    const either: Either<Error, Either<Left, Right>> = await this._io.safeRun();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    /** @ts-ignore */
+    return either.isLeft() ? either : either.getRight();
   }
 }

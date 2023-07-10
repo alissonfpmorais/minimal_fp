@@ -253,15 +253,33 @@ describe('Testing EitherIO Monad', () => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       /** @ts-ignore */
     ).catch((error: never) => {
-      expect(error).toEqual(errorMessage);
+      expect(error).toEqual(new Error(`Critical error! Does not throw an exception inside the error handler!`));
       return Either.left(nextErrorMessage);
     });
 
     const either: Either<string | Error, number> = await eitherIO.safeRun();
     expect(either.getRight).toThrow('No right value found');
-    expect(either.getLeft()).toEqual(
-      new Error(`Critical error! Does not throw an exception inside the error handler!`),
-    );
+    expect(either.getLeft()).toEqual(nextErrorMessage);
+  });
+
+  it('Throwing inside error handler should be recoverable', async () => {
+    const eitherIO: EitherIO<string, number> = EitherIO.from(
+      () => {
+        throw new Error(errorMessage);
+      },
+      () => {
+        throw new Error('Throw inside start handler');
+      },
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      /** @ts-ignore */
+    ).catch((error: never) => {
+      expect(error).toEqual(new Error(`Critical error! Does not throw an exception inside the error handler!`));
+      return Either.right(42);
+    });
+
+    const either: Either<string | Error, number> = await eitherIO.safeRun();
+    expect(either.getLeft).toThrow('No left value found');
+    expect(either.getRight()).toEqual(42);
   });
 
   it('Check if EitherIO operators run properly', async () => {
