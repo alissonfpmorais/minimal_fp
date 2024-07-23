@@ -78,8 +78,11 @@ export class EitherIO<Left, Right> {
     return new EitherIO(errorFn, IO.of(either));
   }
 
-  flatMap<NextLeft, NextRight>(
-    fn: (value: Right, errorFn: ErrorFn<Left>) => Promise<EitherIO<NextLeft, NextRight>> | EitherIO<NextLeft, NextRight>,
+  flatMap<NextRight, NextLeft = Left>(
+    fn: (
+      value: Right,
+      errorFn: ErrorFn<Left>,
+    ) => Promise<EitherIO<NextLeft, NextRight>> | EitherIO<NextLeft, NextRight>,
   ): EitherIO<NextLeft | Left, NextRight> {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     /** @ts-ignore */
