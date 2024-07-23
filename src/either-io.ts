@@ -78,16 +78,16 @@ export class EitherIO<Left, Right> {
     return new EitherIO(errorFn, IO.of(either));
   }
 
-  flatMap<NextRight>(
-    fn: (value: Right, errorFn: ErrorFn<Left>) => Promise<EitherIO<Left, NextRight>> | EitherIO<Left, NextRight>,
-  ): EitherIO<Left, NextRight> {
+  flatMap<NextLeft, NextRight>(
+    fn: (value: Right, errorFn: ErrorFn<Left>) => Promise<EitherIO<NextLeft, NextRight>> | EitherIO<NextLeft, NextRight>,
+  ): EitherIO<NextLeft | Left, NextRight> {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     /** @ts-ignore */
     const nextIO: IO<Either<Left, NextRight>> = this._io.flatMap(async (either: Either<Left, Right>) => {
       if (either.isLeft()) return IO.of(either) as unknown as IO<Either<Left, NextRight>>;
 
       try {
-        const eitherIO: EitherIO<Left, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
+        const eitherIO: EitherIO<NextLeft | Left, NextRight> = await fn(either.getRight(), this._defaultErrorFn);
         return eitherIO.io;
       } catch (error) {
         return IO.of(Either.left(this._defaultFailureFn(error)));

@@ -35,3 +35,5 @@ lerna-debug.log*
 
 # Environment files
 .env
+
+.vscode
